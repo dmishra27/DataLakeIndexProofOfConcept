@@ -1,0 +1,26 @@
+[project]
+name = "dagster-project"
+version = "0.1.0"
+description = "Local Dagster project for Postgres and Delta Lake experimentation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dagster==1.12.18",
+    "dagster-webserver==1.12.18",
+    "dagster-dg-cli==1.12.18",
+    "dagster-pipes==1.12.18",
+    "dagster-postgres==0.28.18",
+    "dagster-docker==0.28.18",
+    "pandas>=2.2,<3.0",
+    "pyarrow>=18,<22",
+    "deltalake>=0.25,<0.26",
+    "duckdb>=1.2,<2.0",
+    "sqlalchemy>=2.0,<3.0",
+]
+
+[project.scripts]
+dagster-project = "dagster_project.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.9.2,<0.10.0"]
+build-backend = "uv_build"

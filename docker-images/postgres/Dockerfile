@@ -1,0 +1,7 @@
+FROM postgres:17
+
+ENV POSTGRES_USER=datalake
+ENV POSTGRES_PASSWORD=datalake
+ENV POSTGRES_DB=datalake
+
+EXPOSE 5432
