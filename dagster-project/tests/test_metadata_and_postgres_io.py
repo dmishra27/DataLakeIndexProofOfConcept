@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
+import polars as pl
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -223,7 +224,7 @@ class PostgresIOTests(unittest.TestCase):
         self.assertIn("min_numeric", overrides)
         self.assertNotIn("plain_text", overrides)
 
-    def test_frame_from_batch_preserves_nullable_arrow_dtypes(self) -> None:
+    def test_frame_from_batch_preserves_arrow_backed_types(self) -> None:
         batch = pa.record_batch(
             [
                 pa.array([1, None], type=pa.int64()),
@@ -232,8 +233,9 @@ class PostgresIOTests(unittest.TestCase):
             names=["value", "flag"],
         )
         dataframe = postgres_io.frame_from_batch(batch)
-        self.assertEqual(str(dataframe["value"].dtype), "Int64")
-        self.assertEqual(str(dataframe["flag"].dtype), "boolean")
+        self.assertIsInstance(dataframe, pl.DataFrame)
+        self.assertEqual(dataframe.schema["value"], pl.Int64)
+        self.assertEqual(dataframe.schema["flag"], pl.Boolean)
 
     @patch("dagster_project.postgres_io.time.time", return_value=110.0)
     def test_progress_message_reports_rows_batches_and_rate(self, _mock_time) -> None:

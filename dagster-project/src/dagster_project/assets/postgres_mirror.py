@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pandas as pd
+import polars as pl
 from dagster import MaterializeResult, MetadataValue, asset
 
 from ..env import MASKED_POSTGRES_URL
@@ -43,14 +43,14 @@ def postgres_mirror() -> MaterializeResult:
         loaded_rows[f"mart.{table_name}"] = load_delta_table_to_postgres("mart", table_name)
 
     metadata_tables = {
-        "column_catalog": pd.read_parquet(DELTA_METADATA_DIR / "column_catalog.parquet"),
-        "column_statistics": pd.read_parquet(DELTA_METADATA_DIR / "column_statistics.parquet"),
-        "delta_log_entries": pd.read_parquet(DELTA_METADATA_DIR / "delta_log_entries.parquet"),
-        "predicate_row_group_index": pd.read_parquet(
+        "column_catalog": pl.read_parquet(DELTA_METADATA_DIR / "column_catalog.parquet"),
+        "column_statistics": pl.read_parquet(DELTA_METADATA_DIR / "column_statistics.parquet"),
+        "delta_log_entries": pl.read_parquet(DELTA_METADATA_DIR / "delta_log_entries.parquet"),
+        "predicate_row_group_index": pl.read_parquet(
             DELTA_METADATA_DIR / "predicate_row_group_index.parquet"
         ),
-        "current_snapshot_files": pd.read_parquet(DELTA_METADATA_DIR / "current_snapshot_files.parquet"),
-        "current_snapshot_file_stats": pd.read_parquet(
+        "current_snapshot_files": pl.read_parquet(DELTA_METADATA_DIR / "current_snapshot_files.parquet"),
+        "current_snapshot_file_stats": pl.read_parquet(
             DELTA_METADATA_DIR / "current_snapshot_file_stats.parquet"
         ),
     }

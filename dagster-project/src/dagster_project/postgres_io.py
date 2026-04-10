@@ -4,7 +4,7 @@ import io
 import time
 
 import pandas as pd
-import pyarrow as pa
+import polars as pl
 from sqlalchemy import create_engine, text
 from sqlalchemy.types import Boolean, Date, Numeric
 from sqlalchemy.dialects.postgresql import JSONB
@@ -14,6 +14,7 @@ from .delta_io import delta_table
 
 DELTA_COPY_BATCH_SIZE = 100_000
 DELTA_COPY_COMMIT_INTERVAL = 10
+FrameT = pd.DataFrame | pl.DataFrame
 
 
 def postgres_engine():
@@ -40,34 +41,35 @@ def quoted_identifier(identifier: str) -> str:
     return '"' + identifier.replace('"', '""') + '"'
 
 
-def frame_from_batch(batch) -> pd.DataFrame:
-    """Convert an Arrow batch into a pandas DataFrame with nullable dtypes preserved."""
-    dataframe = batch.to_pandas()
-    for field in batch.schema:
-        column_name = field.name
-        if pa.types.is_integer(field.type):
-            dataframe[column_name] = pd.array(dataframe[column_name], dtype="Int64")
-        elif pa.types.is_boolean(field.type):
-            dataframe[column_name] = pd.array(dataframe[column_name], dtype="boolean")
-    return dataframe
+def frame_from_batch(batch) -> pl.DataFrame:
+    """Convert an Arrow batch into a Polars DataFrame with Arrow-backed dtypes preserved."""
+    return pl.from_arrow(batch)
 
 
-def copy_dataframe(cursor, schema: str, table_name: str, dataframe: pd.DataFrame) -> int:
-    """Bulk load a DataFrame into Postgres using COPY FROM STDIN."""
-    if dataframe.empty:
+def copy_dataframe(cursor, schema: str, table_name: str, dataframe: FrameT) -> int:
+    """Bulk load a pandas or Polars DataFrame into Postgres using COPY FROM STDIN."""
+    if isinstance(dataframe, pl.DataFrame):
+        if dataframe.is_empty():
+            return 0
+    elif dataframe.empty:
         return 0
     buffer = io.StringIO()
-    dataframe.to_csv(buffer, index=False, header=False, na_rep="\\N")
+    if isinstance(dataframe, pl.DataFrame):
+        dataframe.write_csv(buffer, include_header=False, null_value="\\N")
+        row_count = dataframe.height
+    else:
+        dataframe.to_csv(buffer, index=False, header=False, na_rep="\\N")
+        row_count = len(dataframe)
     buffer.seek(0)
     columns = ", ".join(quoted_identifier(column) for column in dataframe.columns)
     cursor.copy_expert(
         f"COPY {schema}.{quoted_identifier(table_name)} ({columns}) FROM STDIN WITH CSV NULL '\\N'",
         buffer,
     )
-    return len(dataframe)
+    return row_count
 
 
-def dtype_overrides(dataframe: pd.DataFrame) -> dict[str, object]:
+def dtype_overrides(dataframe: FrameT) -> dict[str, object]:
     """Return SQLAlchemy dtype overrides for JSON payload columns."""
     overrides: dict[str, object] = {}
     typed_columns = {
@@ -86,12 +88,19 @@ def dtype_overrides(dataframe: pd.DataFrame) -> dict[str, object]:
     return overrides
 
 
-def load_dataframe_to_postgres(schema: str, table_name: str, dataframe: pd.DataFrame) -> int:
+def _empty_pandas_frame(dataframe: FrameT) -> pd.DataFrame:
+    """Return an empty pandas frame matching the incoming pandas or Polars schema."""
+    if isinstance(dataframe, pl.DataFrame):
+        return dataframe.clear().to_pandas(use_pyarrow_extension_array=True)
+    return dataframe.iloc[0:0]
+
+
+def load_dataframe_to_postgres(schema: str, table_name: str, dataframe: FrameT) -> int:
     """Replace a Postgres table with DataFrame contents and return loaded row count."""
     engine = postgres_engine()
     with engine.begin() as connection:
         connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-    dataframe.iloc[0:0].to_sql(
+    _empty_pandas_frame(dataframe).to_sql(
         table_name,
         engine,
         schema=schema,
@@ -131,7 +140,13 @@ def load_delta_table_to_postgres(schema: str, table_name: str) -> int:
     with engine.begin() as connection:
         connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
     first_frame = frame_from_batch(first_batch)
-    first_frame.iloc[0:0].to_sql(table_name, engine, schema=schema, if_exists="replace", index=False)
+    _empty_pandas_frame(first_frame).to_sql(
+        table_name,
+        engine,
+        schema=schema,
+        if_exists="replace",
+        index=False,
+    )
     raw_connection = engine.raw_connection()
     rows_loaded = 0
     batches_loaded = 0

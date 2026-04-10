@@ -12,6 +12,7 @@ dependencies = [
     "dagster-postgres==0.28.18",
     "dagster-docker==0.28.18",
     "pandas>=2.2,<3.0",
+    "polars>=1.28,<2.0",
     "pyarrow>=18,<22",
     "deltalake>=0.25,<0.26",
     "duckdb>=1.2,<2.0",

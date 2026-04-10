@@ -4,7 +4,7 @@ This project is pinned to `dagster==1.12.18` and set up for local work with:
 
 - Postgres-backed Dagster services
 - Docker-based runs
-- Delta Lake / Arrow / Pandas data access
+- Delta Lake / Arrow / Polars-backed load paths
 
 `dagster==1.14.20` was requested, but that version is not published on PyPI. The
 closest practical choice on April 3, 2026 is `1.12.18`, published on March 5,
@@ -46,6 +46,12 @@ This uses:
 The daemon runs detached in the background and picks up queued runs from the
 local Dagster instance, so the pipeline is no longer tied to the originating
 shell command.
+
+## DataFrames
+
+The Postgres mirror path now uses Polars for parquet reads and Arrow batch
+conversion before bulk COPY into Postgres. Pandas remains installed only where
+the SQLAlchemy table bootstrap still benefits from it.
 
 If Docker Desktop is running, the Postgres image tarball will live under
 `..\docker-images\postgres\`.
