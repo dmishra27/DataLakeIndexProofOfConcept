@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataLakeIndexProofOfConcept — Architecture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e3a5f;
+    --accent1: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --accent5: #ef4444;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-bright: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 60px;
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent1), transparent);
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent1);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 6px 16px;
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    color: var(--text-bright);
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    color: var(--accent1);
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.8;
+  }
+
+  /* Flow pills */
+  .flow-nav {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 56px;
+  }
+
+  .flow-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    letter-spacing: 0.5px;
+  }
+
+  .flow-pill:nth-child(1) { color: var(--accent1); border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.06); }
+  .flow-pill:nth-child(2) { color: var(--accent2); border-color: rgba(124,58,237,0.3); background: rgba(124,58,237,0.06); }
+  .flow-pill:nth-child(3) { color: var(--accent3); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+  .flow-pill:nth-child(4) { color: var(--accent4); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+  .flow-pill:nth-child(5) { color: var(--accent5); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+
+  .flow-pill:hover { transform: translateY(-2px); filter: brightness(1.3); }
+
+  /* Section */
+  .section {
+    margin-bottom: 64px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.1s; }
+  .section:nth-child(2) { animation-delay: 0.2s; }
+  .section:nth-child(3) { animation-delay: 0.3s; }
+  .section:nth-child(4) { animation-delay: 0.4s; }
+  .section:nth-child(5) { animation-delay: 0.5s; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bg);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .s1 .section-num { background: var(--accent1); }
+  .s2 .section-num { background: var(--accent2); }
+  .s3 .section-num { background: var(--accent3); }
+  .s4 .section-num { background: var(--accent4); }
+  .s5 .section-num { background: var(--accent5); }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.3px;
+  }
+
+  .section-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .diagram-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .s1 .diagram-card { border-top: 2px solid var(--accent1); }
+  .s2 .diagram-card { border-top: 2px solid var(--accent2); }
+  .s3 .diagram-card { border-top: 2px solid var(--accent3); }
+  .s4 .diagram-card { border-top: 2px solid var(--accent4); }
+  .s5 .diagram-card { border-top: 2px solid var(--accent5); }
+
+  .diagram-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    opacity: 0.03;
+    pointer-events: none;
+  }
+
+  .s1 .diagram-card::before { background: var(--accent1); }
+  .s2 .diagram-card::before { background: var(--accent2); }
+  .s3 .diagram-card::before { background: var(--accent3); }
+  .s4 .diagram-card::before { background: var(--accent4); }
+  .s5 .diagram-card::before { background: var(--accent5); }
+
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+  }
+
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Comparison table */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin-top: 32px;
+  }
+
+  .compare-table th {
+    background: var(--surface2);
+    color: var(--accent1);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .compare-table tr:hover td { background: rgba(0,212,255,0.03); }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  .tag-nsi { background: rgba(16,185,129,0.15); color: var(--accent3); border: 1px solid rgba(16,185,129,0.3); }
+  .tag-delta { background: rgba(245,158,11,0.15); color: var(--accent4); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">Architecture Reference</div>
+    <h1>DataLake<span>Index</span>PoC</h1>
+    <p class="subtitle">MonkeyDData · Delta Lake + NSI Predicate Pruning Benchmark<br/>Dagster · Postgres · DuckDB · PyArrow · NYC Taxi Dataset</p>
+  </header>
+
+  <div class="flow-nav">
+    <div class="flow-pill">① Data Sources</div>
+    <div class="flow-pill">② Dagster Pipeline</div>
+    <div class="flow-pill">③ Delta Lake + Metadata</div>
+    <div class="flow-pill">④ NSI Index Build</div>
+    <div class="flow-pill">⑤ Benchmark Evaluation</div>
+  </div>
+
+  <!-- DIAGRAM 1: Data Sources → Delta Lake -->
+  <div class="section s1">
+    <div class="section-header">
+      <span class="section-num">FLOW 01</span>
+      <span class="section-title">Data Ingestion — Sources to Delta Lake</span>
+      <span class="section-desc">datasource/ → dagster-project/ → delta-lake/warehouse/</span>
+    </div>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart LR
+    subgraph SRC["📁 datasource/nyc-taxi/"]
+        Y["yellow_tripdata_*.parquet\n12 monthly files"]
+        G["green_tripdata_*.parquet\n12 monthly files"]
+        F["fhv_tripdata_*.parquet\n12 monthly files"]
+        Z["taxi_zone_lookup.csv\n+ vendor/payment/rate"]
+    end
+
+    subgraph DAGSTER["⚙️ Dagster Assets"]
+        AD["delta_dimensions\nasset"]
+        AF["delta_facts\nasset\nDuckDB SQL → Arrow batches"]
+    end
+
+    subgraph DL["🏔️ Delta Lake — delta-lake/warehouse/"]
+        subgraph DIMS["Dimensions"]
+            D1["dim_location"]
+            D2["dim_vendor"]
+            D3["dim_payment_type"]
+            D4["dim_rate_code"]
+        end
+        subgraph FACTS["Facts — partitioned pickup_year/month"]
+            F1["fact_trip_yellow\n~40 cols"]
+            F2["fact_trip_green\n~42 cols"]
+            F3["fact_trip_fhv\n~15 cols"]
+            F4["fact_trip\nUNION ALL"]
+        end
+        DLOG[("_delta_log/*.json\nmin/max/nullCount\nauto-generated")]
+    end
+
+    Z --> AD
+    Y & G & F -->|read_parquet| AF
+    AD -->|write_delta_from_dataframe| DIMS
+    AF -->|write_delta_from_query\n250k Arrow batches| FACTS
+    FACTS -.->|Delta protocol| DLOG
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: Metadata Pipeline -->
+  <div class="section s2">
+    <div class="section-header">
+      <span class="section-num">FLOW 02</span>
+      <span class="section-title">Metadata Export — Delta Lake to Postgres</span>
+      <span class="section-desc">delta-lake/metadata_exports/ → Postgres metadata schema</span>
+    </div>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart LR
+    subgraph DAGSTER2["⚙️ Dagster Metadata Assets"]
+        AM["metadata_exports\nasset"]
+        ASF["current_snapshot_files\nasset"]
+        ASFS["current_snapshot_file_stats\nasset"]
+        APG["postgres_mirror\nasset"]
+    end
+
+    subgraph PARQUET["📦 delta-lake/metadata_exports/"]
+        P1["column_catalog.parquet\ntable·col·type·nullable"]
+        P2["column_statistics.parquet\nrow_count·null_count·min/max"]
+        P3["delta_log_entries.parquet\nversion·entry_type·payload"]
+        P4["predicate_row_group_index.parquet\nfile×row_group×col min/max"]
+        P5["current_snapshot_files.parquet\none row per active file"]
+        P6["current_snapshot_file_stats.parquet\nfile×col null_count·min/max"]
+    end
+
+    subgraph PG["🐘 Postgres — metadata schema"]
+        PG1[("column_catalog")]
+        PG2[("column_statistics")]
+        PG3[("delta_log_entries")]
+        PG4[("predicate_row_group_index")]
+        PG5[("current_snapshot_files")]
+        PG6[("current_snapshot_file_stats\n⭐ source for NSI build-index")]
+    end
+
+    AM -->|export_parquet| P1 & P2 & P3 & P4
+    ASF -->|export_parquet| P5
+    ASFS -->|export_parquet| P6
+    P1 --> PG1
+    P2 --> PG2
+    P3 --> PG3
+    P4 --> PG4
+    P5 --> PG5
+    P6 --> PG6
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: NSI Index Build -->
+  <div class="section s3">
+    <div class="section-header">
+      <span class="section-num">FLOW 03</span>
+      <span class="section-title">NSI Index Construction</span>
+      <span class="section-desc">nsi/indexer.py + nsi/cli.py → Postgres predicate indexes</span>
+    </div>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart TD
+    subgraph INPUTS["📥 Inputs"]
+        I1[("metadata.\ncurrent_snapshot_file_stats")]
+        I2[("metadata.\ncolumn_catalog")]
+        I3["delta-lake/warehouse/\n*.parquet files"]
+    end
+
+    subgraph NSI["🔧 nsi/indexer.py"]
+        N1["nsi.cli build-index\n──────────────\n_read_metadata_frames()\nbuild_predicate_index_frame()\nnormalize_value_kind()\n_parse_decimal / _parse_timestamp\n_parse_date / _parse_bool"]
+        N2["nsi.cli build-footer-index\n──────────────\niter_warehouse_parquet_files()\n_footer_row_group_records()\nPyArrow: row_group(i).column(j)\nbuild_footer_row_group_stats_frame()"]
+    end
+
+    subgraph TYPED["🏷️ Typed Value Schema — both indexes"]
+        T1["min_numeric / max_numeric\nint · float · double · decimal"]
+        T2["min_timestamp / max_timestamp"]
+        T3["min_date / max_date"]
+        T4["min_boolean / max_boolean"]
+        T5["min_value_text / max_value_text\nfallback for all other types"]
+    end
+
+    subgraph OUTPUTS["📤 Postgres Index Tables"]
+        O1[("metadata.\npredicate_file_index\n━━ NSI File-Level Index ━━\n1 row per file × column\nindexes: table+file, table+col")]
+        O2[("parquet_footer.\nrow_group_stats\n━━ NSI Row-Group Index ━━\n1 row per file × row_group × col\nnum_rows + byte_size")]
+    end
+
+    I1 & I2 -->|_read_metadata_frames()| N1
+    I3 -->|rglob *.parquet| N2
+    N1 --> TYPED
+    N2 --> TYPED
+    TYPED --> O1
+    TYPED --> O2
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 4: Benchmark Evaluation -->
+  <div class="section s4">
+    <div class="section-header">
+      <span class="section-num">FLOW 04</span>
+      <span class="section-title">Benchmark — NSI vs Delta Log Pruning</span>
+      <span class="section-desc">nsi/evaluate_*.py → predicate_output/ vs delta_log_output/</span>
+    </div>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart TD
+    subgraph NSI_PATH["🟢 NSI Pruning Path"]
+        NFL["NSI File-Level\nevaluate_fact_table.py\n──────────────\nfind_candidate_files()\nbuild_candidate_files_query()\nSELECT DISTINCT + EXISTS\ntyped SQL comparisons"]
+        NRG["NSI Row-Group\nevaluate_row_group_*.py\n──────────────\ncorrelated SQL EXISTS\nagainst predicate_row_group_index\n→ candidate file+row_group pairs"]
+    end
+
+    subgraph DELTA_PATH["🟡 Delta Log Baseline"]
+        DL["Delta Log Replay\n──────────────\nglob _delta_log/*.json\nreplay add/remove actions\nparse stats JSON per add\napply minValues/maxValues\n→ candidate file list"]
+    end
+
+    subgraph INDEXES["📊 Index Sources"]
+        PFI[("predicate_file_index")]
+        PRG[("predicate_row_group_index")]
+        DLOG[("_delta_log/*.json")]
+    end
+
+    subgraph OUTPUT["📁 Benchmark Output"]
+        ON["predicate_output/label/\n──────────────\nsummary.json\n  candidate_file_count\n  candidate_row_group_count\n  matching_trip_count\nmatching_trips.parquet\nmatching_trips.csv"]
+        OD["delta_log_output/label/\n──────────────\nsummary.json\n  candidate_file_count\n  delta_log_json_files_read\n  matching_trip_count\nmatching_trips.parquet\nmatching_trips.csv"]
+    end
+
+    PFI -->|build_candidate_files_query| NFL
+    PRG -->|SQL EXISTS per predicate| NRG
+    DLOG -->|glob + parse + replay| DL
+
+    NFL -->|DuckDB BETWEEN filter| ON
+    NRG -->|DuckDB conjunctive filter| ON
+    DL  -->|DuckDB BETWEEN filter| OD
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 5: Full End-to-End Summary -->
+  <div class="section s5">
+    <div class="section-header">
+      <span class="section-num">FLOW 05</span>
+      <span class="section-title">End-to-End Summary Pipeline</span>
+      <span class="section-desc">Complete data flow in one view</span>
+    </div>
+    <div class="diagram-card">
+      <div class="mermaid">
+flowchart LR
+    A["📁 NYC Taxi\nParquet Files"] -->|Dagster| B["🏔️ Delta Lake\nWarehouse"]
+    B -->|Dagster\nmetadata assets| C["📦 Metadata\nParquet Exports"]
+    B -->|Delta protocol| D[("🗒️ _delta_log\n*.json")]
+    C -->|postgres_mirror\nasset| E["🐘 Postgres\nmetadata schema"]
+    E -->|nsi.cli\nbuild-index| F[("🔍 predicate_\nfile_index")]
+    B -->|nsi.cli\nbuild-footer-index| G[("🔍 row_group\n_stats")]
+    F -->|evaluate_\nfact_table.py| H["✅ predicate_\noutput/"]
+    G -->|evaluate_row_\ngroup_*.py| H
+    D -->|evaluate_\ndelta_log.py| I["📊 delta_log_\noutput/"]
+    H & I -->|compare| J["🏆 NSI wins?\nFewer files scanned"]
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Table -->
+  <div class="section s5" style="animation-delay:0.6s">
+    <div class="section-header">
+      <span class="section-num">REF 01</span>
+      <span class="section-title">Index Comparison Reference</span>
+    </div>
+    <div class="diagram-card">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Index</th>
+            <th>Type</th>
+            <th>Granularity</th>
+            <th>Built By</th>
+            <th>Postgres Table</th>
+            <th>Queried By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>predicate_file_index</strong></td>
+            <td><span class="tag tag-nsi">NSI</span></td>
+            <td>1 row per file × column</td>
+            <td>nsi.cli build-index</td>
+            <td>metadata.predicate_file_index</td>
+            <td>evaluate_fact_table.py</td>
+          </tr>
+          <tr>
+            <td><strong>predicate_row_group_index</strong></td>
+            <td><span class="tag tag-nsi">NSI</span></td>
+            <td>1 row per file × row_group × column</td>
+            <td>Dagster metadata_exports</td>
+            <td>metadata.predicate_row_group_index</td>
+            <td>evaluate_row_group_*.py</td>
+          </tr>
+          <tr>
+            <td><strong>row_group_stats</strong></td>
+            <td><span class="tag tag-nsi">NSI</span></td>
+            <td>1 row per file × row_group × column</td>
+            <td>nsi.cli build-footer-index</td>
+            <td>parquet_footer.row_group_stats</td>
+            <td>Alternative to predicate_row_group_index</td>
+          </tr>
+          <tr>
+            <td><strong>Delta Log Stats</strong></td>
+            <td><span class="tag tag-delta">BASELINE</span></td>
+            <td>File-level min/max only</td>
+            <td>Delta protocol (auto)</td>
+            <td>_delta_log/*.json</td>
+            <td>evaluate_delta_log.py</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  MonkeyDData · DataLakeIndexProofOfConcept · NSI vs Delta Log Predicate Pruning Benchmark
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#1a2235',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#1e3a5f',
+      lineColor: '#00d4ff',
+      secondaryColor: '#111827',
+      tertiaryColor: '#0a0e1a',
+      background: '#0a0e1a',
+      mainBkg: '#1a2235',
+      nodeBorder: '#1e3a5f',
+      clusterBkg: '#111827',
+      titleColor: '#e2e8f0',
+      edgeLabelBackground: '#111827',
+      fontSize: '13px'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      padding: 20
+    }
+  });
+</script>
+</body>
+</html>
